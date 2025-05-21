@@ -1,0 +1,68 @@
+%% TODO: implement function: searm_carve_image
+% check the title above the image for how to use the user-interface to resize the input image
+function im = seam_carve_image(im, sz)
+
+% im = imresize(im, sz);
+
+costfunction = @(im) sum( imfilter(im, [.5 1 .5; 1 -6 1; .5 1 .5]).^2, 3 );
+
+k = size(im,2) - sz(2);
+for i = 1:k
+    G = costfunction(im);
+    [ h, w] = size( G );
+    % find a seam in G
+    %init dp and from
+    dp=zeros(h,w);
+    from=zeros(h,w);
+    for i=1:h
+        dp(i,1)=G(i,1);
+    end
+    %find the minimal energy path
+    for i=2:w
+        for j=1:h
+            minNeibor=dp(j,i-1);
+            from(j,i)=j;
+            if j>1 && dp(j-1,i-1)<minNeibor
+                minNeibor=dp(j-1,i-1);
+                from(j,i)=j-1;
+            end
+            if j<h&&dp(j+1,i-1)<minNeibor
+                minNeibor=dp(j+1,i-1);
+                from(j,i)=j+1;
+            end
+            dp(j,i)=G(j,i)+minNeibor;
+        end
+    end
+
+    mn=10^18;
+    idx=-1;
+    for i=1:h
+        if dp(i,w)<mn
+            mn=dp(i,w);
+            idx=i;
+        end
+    end
+
+    path = 0;
+    for i = w : -1 : 1
+      if path == 0
+        path = [ idx ];
+      else
+        path = [ idx path ];
+      end
+      idx = from( idx, i );
+    end
+
+    addRow = im( 1, :, : );
+    im = [ addRow; im ];
+
+     for j = 1 : path( 1, i )
+        im( j, i, : ) = im( j + 1, i, : );
+      end
+      if path( 1, i ) + 2 > h
+        im( path( 1, i ) + 1, i, : ) = im( path( 1, i ), i, : );
+      else
+        im( path( 1, i ) + 1, i, : ) = im( path( 1, i ), i, : ) / 2 +im( path( 1, i ) + 2, i, : ) / 2;
+      end
+    %% remove seam from im
+end
